@@ -9,7 +9,7 @@ load_dotenv()
 
 # Check for environment variables before initializing the service
 required_env_vars = [
-    "COSMOS_ENDPOINT", "COSMOS_KEY", "COSMOS_DATABASE_NAME", "COSMOS_CONTAINER_NAME",
+    "PG_HOST", "PG_PORT", "PG_DATABASE", "PG_USER", "PG_PASSWORD",
     "AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_DEPLOYMENT_NAME",
     "AZURE_OPENAI_TEXTEMBEDDING_DEPLOYMENT_NAME"
 ]
@@ -24,8 +24,8 @@ else:
     from llm_service import LLMQueryService
 
     def main():
-        st.title("Azure Cosmos DB 자연어 쿼리 (벡터 검색 RAG)")
-        st.write("Cosmos DB 데이터베이스에 자연어로 질문하세요. (의미 기반 검색)")
+        st.title("PostgreSQL 기반 자연어 쿼리 (벡터 검색 RAG)")
+        st.write("PostgreSQL 데이터베이스에 자연어로 질문하세요. (의미 기반 검색)")
 
         # Initialize the service and cache it
         @st.cache_resource

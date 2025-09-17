@@ -1,24 +1,74 @@
 # llm_service.py
 import os
+import json
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from pgvector.psycopg2 import register_vector
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
-import json
 
-from cosmos_connector import CosmosDBConnector
 from prompts import ANSWER_GENERATION_PROMPT
 
 load_dotenv()
 
+class PostgresConnector:
+    """
+    Handles the connection to and vector search operations in PostgreSQL.
+    """
+    def __init__(self):
+        try:
+            self.conn = psycopg2.connect(
+                host=os.getenv("PG_HOST"),
+                port=os.getenv("PG_PORT"),
+                dbname=os.getenv("PG_DATABASE"),
+                user=os.getenv("PG_USER"),
+                password=os.getenv("PG_PASSWORD")
+            )
+            register_vector(self.conn)
+            print("Successfully connected to PostgreSQL.")
+        except psycopg2.OperationalError as e:
+            print(f"Error connecting to PostgreSQL: {e}")
+            self.conn = None
+
+    def vector_search(self, query_vector: list[float], top_k: int = 5) -> list:
+        """
+        Performs a vector similarity search in the PostgreSQL database.
+        """
+        if not self.conn:
+            return {"error": "Database connection is not available."}
+        
+        try:
+            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # The <=> operator calculates the cosine distance.
+                # We must explicitly cast the list of floats to the `vector` type using `::vector`.
+                cur.execute(
+                    "SELECT id, content, 1 - (embedding <=> %s::vector) AS similarity FROM gdelt_embeddings ORDER BY embedding <=> %s::vector LIMIT %s",
+                    (query_vector, query_vector, top_k)
+                )
+                results = cur.fetchall()
+                return results
+        except Exception as e:
+            print(f"An error occurred during vector search: {e}")
+            # If an error occurs, rollback the transaction to keep the connection healthy.
+            if self.conn:
+                self.conn.rollback()
+            return {"error": str(e)}
+
+    def __del__(self):
+        if self.conn:
+            self.conn.close()
+            print("PostgreSQL connection closed.")
+
+
 class LLMQueryService:
     """
-    Service to handle the logic of converting natural language to a vector,
-    performing a similarity search in Cosmos DB, and generating a natural language response.
+    Service to handle the RAG pipeline using PostgreSQL for vector search.
     """
     def __init__(self):
         """
-        Initializes the LLMs, embedding model, and the Cosmos DB connector.
+        Initializes the LLMs, embedding model, and the Postgres connector.
         """
         self.llm = AzureChatOpenAI(
             azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
@@ -28,18 +78,12 @@ class LLMQueryService:
             azure_deployment=os.getenv("AZURE_OPENAI_TEXTEMBEDDING_DEPLOYMENT_NAME"),
             api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
         )
-        self.cosmos_connector = CosmosDBConnector()
-        print("LLM service initialized with embedding model.")
+        self.db_connector = PostgresConnector()
+        print("LLM service initialized with PostgreSQL connector.")
 
     def embed_question(self, question: str) -> list[float]:
         """
         Generates an embedding vector for the user's question.
-
-        Args:
-            question (str): The user's natural language question.
-
-        Returns:
-            list[float]: The embedding vector for the question.
         """
         print("Embedding user question...")
         query_vector = self.embedding_model.embed_query(question)
@@ -49,13 +93,6 @@ class LLMQueryService:
     def generate_final_answer(self, question: str, context: list) -> str:
         """
         Generates a final natural language answer based on the query results.
-
-        Args:
-            question (str): The original user question.
-            context (list): The data retrieved from Cosmos DB.
-
-        Returns:
-            str: The final natural language answer.
         """
         prompt_template = PromptTemplate(
             input_variables=["question", "context"],
@@ -64,8 +101,7 @@ class LLMQueryService:
         chain = LLMChain(llm=self.llm, prompt=prompt_template)
 
         print("Generating final answer from context...")
-        # Convert context to a JSON string for the prompt
-        context_str = json.dumps(context, indent=2, ensure_ascii=False)
+        context_str = json.dumps(context, indent=2, ensure_ascii=False, default=str)
         
         response = chain.invoke({"question": question, "context": context_str})
         answer = response.get('text', '').strip()
@@ -75,12 +111,6 @@ class LLMQueryService:
     def process_user_question(self, question: str) -> str:
         """
         Full RAG pipeline: question -> embedding -> vector search -> get context -> generate answer.
-
-        Args:
-            question (str): The user's natural language question.
-
-        Returns:
-            str: The final natural language answer.
         """
         try:
             # 1. Embed the user's question
@@ -88,8 +118,8 @@ class LLMQueryService:
             if not query_vector:
                 return "죄송합니다, 질문을 임베딩으로 변환할 수 없습니다."
 
-            # 2. Perform vector search in Cosmos DB
-            search_results = self.cosmos_connector.vector_search(query_vector, top_k=5)
+            # 2. Perform vector search in PostgreSQL
+            search_results = self.db_connector.vector_search(query_vector, top_k=5)
             if "error" in search_results or not search_results:
                 return f"데이터를 검색하는 중 오류가 발생했거나 관련 데이터를 찾지 못했습니다. (오류: {search_results.get('error', '결과 없음')})"
 
