@@ -1,0 +1,9 @@
+streamlit
+python-dotenv
+azure-cosmos
+langchain-openai
+langchain
+openai
+langchain-community
+psycopg2-binary
+pgvector

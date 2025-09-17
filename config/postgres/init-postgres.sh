@@ -19,12 +19,20 @@ echo "Setting up databases..."
 # 함수를 호출해서 각 DB를 체크하고 생성한다.
 create_db_if_not_exists "metastore_db"
 create_db_if_not_exists "superset"
+create_db_if_not_exists "rag_db"
 
 # 권한 부여는 DB 생성이 확실히 끝난 뒤에 실행한다.
 echo "Granting privileges..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     GRANT ALL PRIVILEGES ON DATABASE metastore_db TO $POSTGRES_USER;
     GRANT ALL PRIVILEGES ON DATABASE superset TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE rag_db TO $POSTGRES_USER;
+EOSQL
+
+# rag_db에 pgvector 확장 기능을 활성화한다.
+echo "Enabling pgvector extension in rag_db..."
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "rag_db" <<-EOSQL
+    CREATE EXTENSION IF NOT EXISTS vector;
 EOSQL
 
 echo "Databases and privileges are set up successfully!"
