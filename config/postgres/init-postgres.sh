@@ -28,7 +28,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     GRANT ALL PRIVILEGES ON DATABASE superset TO $POSTGRES_USER;
     GRANT ALL PRIVILEGES ON DATABASE rag_db TO $POSTGRES_USER;
 EOSQL
-
+echo "Databases and privileges are set up successfully!"
 # rag_db에 pgvector 확장 기능을 활성화한다.
 echo "Enabling pgvector extension in rag_db..."
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "rag_db" <<-EOSQL
