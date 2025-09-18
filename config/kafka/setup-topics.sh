@@ -14,14 +14,6 @@ kafka-topics --create \
     --if-not-exists \
     --bootstrap-server kafka:9092
 
-# Create Wiki events topic  
-kafka-topics --create \
-    --topic wiki_events \
-    --partitions 1 \
-    --replication-factor 1 \
-    --if-not-exists \
-    --bootstrap-server kafka:9092
-
 echo "Topics created successfully!"
 
 # List topics to verify

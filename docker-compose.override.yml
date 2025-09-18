@@ -531,24 +531,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # wiki-realtime-collector:
-  #   build:
-  #     context: .
-  #     dockerfile: ./wiki-stream-producer/Dockerfile
-  #   container_name: wiki-realtime-collector
-  #   networks:
-  #     - data-network
-  #   restart: always
-  #   depends_on:
-  #     - kafka
-  #   env_file:
-  #     - ./.env
-  #   volumes:
-  #     - .:/app
-  #   environment:
-  #     - PYTHONPATH=/app
-  #   command: [ "python", "-u", "wiki-stream-producer/wiki_country_stream_producer.py" ]
-
 volumes:
   minio-data:
   spark-jars:
