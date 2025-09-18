@@ -34,10 +34,12 @@ else:
 
         llm_service = get_llm_service()
 
-        # User input
-        user_question = st.text_input("질문을 입력하세요:", "")
+        # User input form
+        with st.form(key='query_form'):
+            user_question = st.text_input("질문을 입력하세요:", "")
+            submit_button = st.form_submit_button(label='질문하기')
 
-        if st.button("질문하기"):
+        if submit_button:
             if user_question:
                 with st.spinner("답변을 생성하는 중입니다..."):
                     try:

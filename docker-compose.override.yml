@@ -265,7 +265,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: pgvector/pgvector:pg16
+    image: ${POSTGRES_IMAGE}
     container_name: postgres
     env_file:
       - ./.env
