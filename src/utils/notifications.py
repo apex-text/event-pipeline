@@ -76,7 +76,7 @@ def notify_gdelt_anomalies(silver_df: DataFrame):
                     teams_message = message.replace(
                         "\n", "<br>"
                     )  # Teams는 줄바꿈에 <br> 사용
-                    payload = {"text": teams_message}
+                    payload = {"content": teams_message}
                     response = requests.post(MS_TEAMS_WEBHOOK_URL, json=payload)
                     response.raise_for_status()
                     logger.info("🚀 Microsoft Teams 알림을 성공적으로 보냈습니다.")
