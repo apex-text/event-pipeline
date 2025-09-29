@@ -64,6 +64,7 @@ config/*.yaml
 !config/*.example.yaml
 config/config.ini
 !config/config.example.ini
+*/config.json
 
 # Claude Code 관련 (개발 도구)
 .claude/
